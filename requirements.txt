@@ -1,0 +1,15 @@
+pandas
+seaborn
+numpy
+xgboost
+matplotlib
+scikit-learn
+cryptography
+Crypto
+flwr
+flwr[simulation] 
+flwr-datasets[vision] 
+torch 
+torchvision 
+scikit-learn
+typing 
