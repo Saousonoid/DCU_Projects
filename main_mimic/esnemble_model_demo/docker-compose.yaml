@@ -1,0 +1,9 @@
+version: '3'
+services:
+  svm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python3 /workspace/SVM_MT.py --dataset_path /workspace/total.csv  --multitask_path  /workspace/multitask.pth
+    volumes:
+      - .:/workspace

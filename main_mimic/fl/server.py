@@ -13,6 +13,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import warnings
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.client_manager import ClientManager
+import argparse
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -334,17 +335,17 @@ def config_func(rnd: int) -> Dict[str, str]:
     }
     return config
 
-def main(test_data_path, num_rounds):
+def main(options):
     '''Main function to start the federated learning server and manage the training rounds'''
     
-    if os.path.exists('server_puk.pem'):
+    if os.path.exists('/workspace/server_puk.pem'):
         print('removing existing puK')
-        os.remove('server_puk.pem')
+        os.remove('/workspace/server_puk.pem')
     prk, puk = generate_rsa_key_pair()
-    with open("server_puk.pem", "wb") as file:
+    with open("/workspace/server_puk.pem", "wb") as file:
         file.write(puk)
     print('RSA key pair Generated Successfully')
-    X_test, Y_test = load_test_data(test_data_path)
+    X_test, Y_test = load_test_data(options.test_data_path)
 
     strategy = CustomFedAvg(
         fraction_fit=1,
@@ -353,15 +354,15 @@ def main(test_data_path, num_rounds):
         min_fit_clients=2,
         on_fit_config_fn=config_func,
         on_evaluate_config_fn=config_func,
-        num_rounds=num_rounds,
+        num_rounds=options.num_rounds,
         rsa_prk=prk,
         x=X_test,
         y=Y_test
     )
     try:
-        rounds = num_rounds
+        rounds = options.num_rounds
         fl.server.start_server(
-            server_address="localhost:5040",
+            server_address=options.address,
             config=fl.server.ServerConfig(num_rounds=rounds),
             strategy=strategy
         )
@@ -370,11 +371,14 @@ def main(test_data_path, num_rounds):
         print(f"Unexpected Error: {e}")
     finally:
         if(strategy.model is not None):
-            save_model(strategy.model, 'multitask.pth')
+            save_model(strategy.model, '/workspace/multitask.pth')
         else:
             sys.exit(0)
 
 if __name__ == "__main__":
-    test_data_path = sys.argv[1]
-    num_rounds = int(sys.argv[2])
-    main(test_data_path, num_rounds)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--test_data_path", type=str, required=True)
+    arg_parser.add_argument("--num_rounds", type=int, required=True)
+    arg_parser.add_argument("--address", type=str, default="localhost:5040")
+    options = arg_parser.parse_args()
+    main(options)

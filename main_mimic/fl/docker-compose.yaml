@@ -1,0 +1,30 @@
+version: '3'
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python3 /workspace/server.py --test_data_path /workspace/test.csv --num_rounds 30 --address server:5040
+    volumes:
+      - .:/workspace
+
+  client1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python3 /workspace/client.py --client_data_path /workspace/dia.csv --label_column diabetes --task_no 0 --address server:5040
+    volumes:
+      - .:/workspace
+    depends_on:
+      - server
+  
+  client2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python3 /workspace/client.py --client_data_path /workspace/ckd.csv --label_column ckd --task_no 1 --address server:5040
+    volumes:
+      - .:/workspace
+    depends_on:
+      - server
+  

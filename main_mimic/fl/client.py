@@ -16,7 +16,7 @@ from torch import tensor
 import warnings
 import pickle
 from utils import generate_aes_key, rsa_encrypt, encrypt_data, decrypt_data, load_key
-
+import argparse
 def load_data(file_path, label_column):
     """Load and preprocess the data from a CSV file"""
     data = pd.read_csv(file_path, index_col=0)
@@ -48,7 +48,7 @@ class Client(fl.client.Client):
 
         # Key management for encryption and decryption
         self.aes_key = generate_aes_key()  # Generate an AES key for symmetric encryption
-        server_pk = load_key('server_puk.pem')  # Load the server's public RSA key
+        server_pk = load_key('/workspace/server_puk.pem')  # Load the server's public RSA key
         self.encrypted_aes_key = rsa_encrypt(server_pk, self.aes_key)  # Encrypt the AES key with the server's public key
 
     def fit(self, ins: FitIns) -> FitRes:
@@ -114,9 +114,9 @@ class Client(fl.client.Client):
             metrics={"accuracy": float(accuracy)},
         )
 
-def main(client_data_path, label_column, task_no):
+def main(options):
     """Main function to set up the client and start the training process"""
-    X, y = load_data(client_data_path, label_column)
+    X, y = load_data(options.client_data_path, options.label_column)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
     num_train = len(X_train)
@@ -158,7 +158,7 @@ def main(client_data_path, label_column, task_no):
 
     # Create the Flower client with all configurations
     client = Client(
-        task_no=task_no,
+        task_no=options.task_no,
         train_loader=train_loader,
         val_loader=val_loader,
         net=model,
@@ -172,15 +172,21 @@ def main(client_data_path, label_column, task_no):
     
     try:
         # Start the client and connect to the server
-        fl.client.start_client(server_address="localhost:5040", client=client)
+        fl.client.start_client(server_address= options.address , client=client)
     except Exception as e:
         print(f"Unexpected Error: {e}")
     finally:
         sys.exit(0)
 
 if __name__ == "__main__":
-    client_data_path = sys.argv[1]  
-    label_column = sys.argv[2]
-    task_no  = sys.argv[3]
-    print(f'Starting Client for Task: {task_no}, Representing Label: {label_column}')
-    main(client_data_path, label_column, task_no)
+   
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--client_data_path", type=str, required=True)
+    arg_parser.add_argument("--label_column", type=str, required=True)
+    arg_parser.add_argument("--task_no", type=int, required=True)
+    arg_parser.add_argument("--address", type=str, default="localhost:5040")
+    options = arg_parser.parse_args()
+
+    print('Starting Client for Task: '+str(options.task_no)+', Representing Label: '+ str(options.label_column))
+
+    main(options)
